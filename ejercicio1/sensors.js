@@ -1,4 +1,28 @@
-class Sensor {}
+class Sensor {
+    static validType = ['temperature','humidity','pressure'];
+
+    constructor(id, name, type, value, unit, updated_at) {
+        this.id = id;
+        this.name = name;
+        this._type = type;
+        this.value = value;
+        this.unit = unit;
+        this._updated_at = updated_at;
+    }
+
+    set updateValue(newValue) {
+        this.value = newValue;
+        this.updated_at = new Date().toISOString();
+    }
+
+    set type(newType) {
+        if (!validTypes.includes(newType)) {
+            throw new Error(`Invalid sensor type: ${newType}. Valid types are: ${validTypes.join(', ')}`);
+        }
+        this._type = newType;
+    }
+
+}
 
 class SensorManager {
     constructor() {
@@ -33,7 +57,32 @@ class SensorManager {
         }
     }
 
-    async loadSensors(url) {}
+    async loadSensors(url) {
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar el archivo sensors.js')
+                }
+                return response.json();
+            })
+            .then(data => {
+                data.forEach(sensorData => {
+                    const sensor = new Sensor(
+                        sensorData.id,
+                        sensorData.name,
+                        sensorData.type,
+                        sensorData.value,
+                        sensorData.unit,
+                        sensorData.updated_at
+                    );
+                    this.addSensor(sensor);
+                });
+                this.render();
+            })
+            .catch(error => {
+                console.error('Error al cargar los sensores', error)
+            });
+    }
 
     render() {
         const container = document.getElementById("sensor-container");
