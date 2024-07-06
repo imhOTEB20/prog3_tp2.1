@@ -6,13 +6,27 @@ class Card {
         this.element = this.#createCardElement();
     }
 
+    matches(otherCard) {
+        return this.name === otherCard.name;
+    }
+
+    toggleFlip() {
+        if (this.isFlipped) {
+            this.#unflip();
+        } else {
+            this.#flip();
+        }
+    }
+
     #createCardElement() {
         const cardElement = document.createElement("div");
         cardElement.classList.add("cell");
         cardElement.innerHTML = `
           <div class="card" data-name="${this.name}">
               <div class="card-inner">
-                  <div class="card-front"></div>
+                  <div class="card-front">
+                    <img src="img/posterior.png" alt="posterior">
+                  </div>
                   <div class="card-back">
                       <img src="${this.img}" alt="${this.name}">
                   </div>
@@ -25,11 +39,17 @@ class Card {
     #flip() {
         const cardElement = this.element.querySelector(".card");
         cardElement.classList.add("flipped");
+        this.isFlipped = true;
     }
 
     #unflip() {
         const cardElement = this.element.querySelector(".card");
         cardElement.classList.remove("flipped");
+        this.isFlipped = false;
+    }
+
+    flipDown() {
+        this.#unflip();
     }
 }
 
@@ -40,14 +60,28 @@ class Board {
         this.gameBoardElement = document.getElementById("game-board");
     }
 
+    shuffleCards() {
+        const numberInterations = Math.floor(Math.random() * 2 + 2);
+        for(let i=0; i<numberInterations; i++)
+            this.#fisherYates();
+    }
+
+    #fisherYates() {
+        const numberOfCards = this.cards.length;
+        for (let i = numberOfCards - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i+1));
+            [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+        }
+    }
+
     #calculateColumns() {
         const numCards = this.cards.length;
         let columns = Math.floor(numCards / 2);
 
-        columns = Math.max(2, Math.min(columns, 12));
+        columns = Math.max(2, Math.min(columns, numCards));
 
         if (columns % 2 !== 0) {
-            columns = columns === 11 ? 12 : columns - 1;
+            columns = columns === numCards-1 ? numCards : columns - 1;
         }
 
         return columns;
@@ -70,15 +104,28 @@ class Board {
     }
 
     onCardClicked(card) {
-        if (this.onCardClick) {
-            this.onCardClick(card);
-        }
+        
+    }
+    
+    reset() {
+        this.shuffleCards();
+        this.flipDownAllCards();
+        this.render();
+    }
+
+    flipDownAllCards() {
+        this.cards.forEach(card => card.flipDown());
     }
 }
 
 class MemoryGame {
-    constructor(board, flipDuration = 500) {
+    #count = 0;
+    #secondsElapsed = 0;
+    constructor(board, flipDuration = 500, countElement, timerElement) {
+        this.countElement = countElement;
+        this.timerElement = timerElement;
         this.board = board;
+        this.#count = 0
         this.flippedCards = [];
         this.matchedCards = [];
         if (flipDuration < 350 || isNaN(flipDuration) || flipDuration > 3000) {
@@ -88,18 +135,51 @@ class MemoryGame {
             );
         }
         this.flipDuration = flipDuration;
-        this.board.onCardClick = this.#handleCardClick.bind(this);
+        this.board.onCardClicked = this.#handleCardClick.bind(this);
         this.board.reset();
+        this.#timer();
     }
 
     #handleCardClick(card) {
         if (this.flippedCards.length < 2 && !card.isFlipped) {
             card.toggleFlip();
             this.flippedCards.push(card);
+        }
+        if (this.flippedCards.length === 2) {
+            this.#count++;
+            this.countElement.textContent = `Contador de intentos: ${this.#count}`;
+            setTimeout(() => this.checkForMatch(), this.flipDuration);
+        }
+    }
 
-            if (this.flippedCards.length === 2) {
-                setTimeout(() => this.checkForMatch(), this.flipDuration);
-            }
+    resetGame() {
+        this.#secondsElapsed = -1;
+        this.board.reset();
+        this.flippedCards = [];
+        this.matchedCards = [];
+        this.#count = 0;
+    }
+
+    checkForMatch() {
+        const card1 = this.flippedCards[0];
+        const card2 = this.flippedCards[1];
+        if (card1.matches(card2)) {
+            this.matchedCards.push(card1);
+            this.matchedCards.push(card2);
+        } else {
+            setTimeout(() => {
+                card1.flipDown();
+                card2.flipDown();
+            }, this.flipDuration);
+        }
+        this.flippedCards = [];
+    }
+
+    async #timer(){
+        while(true) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            this.#secondsElapsed++;
+            this.timerElement.textContent = `Segundos transcurridos: ${this.#secondsElapsed}`;
         }
     }
 }
@@ -119,8 +199,9 @@ document.addEventListener("DOMContentLoaded", () => {
         new Card(data.name, data.img),
     ]);
     const board = new Board(cards);
-    const memoryGame = new MemoryGame(board, 1000);
-
+    const countElement = document.getElementById("count");
+    const timerElement = document.getElementById("timer");
+    const memoryGame = new MemoryGame(board, 1000, countElement, timerElement);
     document.getElementById("restart-button").addEventListener("click", () => {
         memoryGame.resetGame();
     });

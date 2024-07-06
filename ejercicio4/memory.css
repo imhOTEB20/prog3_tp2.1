@@ -17,6 +17,12 @@
 .card.flipped .card-inner {
     transform: rotateY(180deg);
 }
+.card-front img {
+    width: 95%;
+    height: 95%;
+    object-fit: cover;
+    display: block;
+}
 
 .card-front,
 .card-back {
@@ -28,18 +34,17 @@
     justify-content: center;
     align-items: center;
 }
-
-.card-front {
-    background: #f0f0f0;
-    border-radius: 10px;
-}
-
-.card-back {
-    transform: rotateY(180deg);
-}
-
-img {
+.card-back img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
 }
+.card-front {
+    padding: 5% 5% 5% 5%;
+    background-color: white;
+}
+.card-back {
+    transform: rotateY(180deg);
+}
+
+
