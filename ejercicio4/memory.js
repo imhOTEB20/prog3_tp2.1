@@ -110,7 +110,6 @@ class Board {
     reset() {
         this.shuffleCards();
         this.flipDownAllCards();
-        this.render();
     }
 
     flipDownAllCards() {
@@ -121,6 +120,7 @@ class Board {
 class MemoryGame {
     #count = 0;
     #secondsElapsed = 0;
+    #gameOver = false;
     constructor(board, flipDuration = 500, countElement, timerElement) {
         this.countElement = countElement;
         this.timerElement = timerElement;
@@ -137,7 +137,9 @@ class MemoryGame {
         this.flipDuration = flipDuration;
         this.board.onCardClicked = this.#handleCardClick.bind(this);
         this.board.reset();
+        this.board.render();
         this.#timer();
+        this.#checkGameOver();
     }
 
     #handleCardClick(card) {
@@ -153,11 +155,14 @@ class MemoryGame {
     }
 
     resetGame() {
-        this.#secondsElapsed = -1;
-        this.board.reset();
+        this.#secondsElapsed = 0;
+        this.timerElement.textContent = `Tiempo transcurrido: 00:00`;
+        this.#count = 0;
+        this.countElement.textContent = `Contador de intentos: 0`;
+        this.#gameOver = false;
         this.flippedCards = [];
         this.matchedCards = [];
-        this.#count = 0;
+        this.board.reset();
     }
 
     checkForMatch() {
@@ -176,10 +181,36 @@ class MemoryGame {
     }
 
     async #timer(){
-        while(true) {
+        while(!this.#gameOver) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             this.#secondsElapsed++;
-            this.timerElement.textContent = `Segundos transcurridos: ${this.#secondsElapsed}`;
+            let seconds = this.#secondsElapsed % 60;
+            let minutes = Math.floor(this.#secondsElapsed / 60);
+
+            this.timerElement.textContent = `Tiempo transcurrido: ${minutes>9 ? minutes : `0${minutes}`}:${seconds>9 ? seconds : `0${seconds}`}`;
+        }
+    }
+
+    async #checkGameOver() {
+        while(true) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (this.matchedCards.length === this.board.cards.length) {
+                this.#gameOver = true;
+                Swal.fire({
+                    title: `Felicidades GANASTE con ${this.#count} intentos.`,
+                    width: 250,
+                    padding: "1em",
+                    color: "#716add",
+                    background: "#fff url(https://sweetalert2.github.io/images/trees.png)",
+                    backdrop: `
+                        rgba(0,0,123,0.4)
+                        url("img/big gran time.gif")
+                        left top
+                        no-repeat
+                        `
+                });
+                break;
+            }
         }
     }
 }
